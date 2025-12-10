@@ -3,6 +3,7 @@ use crate::config::{BotConfig, Config};
 use crate::crater::{CraterClient, CreateExperimentRequest};
 use crate::error::Result;
 use crate::platforms::PlatformAdapter;
+use crate::utils::generate_experiment_name;
 use std::sync::Arc;
 use tracing::info;
 
@@ -47,7 +48,7 @@ impl CommandProcessor {
         issue_id: u64,
         toolchains: Vec<String>,
     ) -> Result<String> {
-        let experiment_name = format!("{}-{}", project.replace('/', "-"), issue_id);
+        let experiment_name = generate_experiment_name(project, issue_id);
         
         info!("Creating experiment: {}", experiment_name);
 

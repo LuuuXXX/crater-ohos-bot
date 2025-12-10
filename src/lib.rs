@@ -4,6 +4,7 @@ pub mod config;
 pub mod crater;
 pub mod error;
 pub mod platforms;
+pub mod utils;
 pub mod webhook;
 
 pub use config::Config;
