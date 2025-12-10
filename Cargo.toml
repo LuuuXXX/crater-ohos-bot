@@ -10,7 +10,6 @@ repository = "https://github.com/LuuuXXX/crater-ohos-bot"
 [dependencies]
 # HTTP Framework
 axum = { version = "0.7", features = ["macros"] }
-tower = "0.4"
 tower-http = { version = "0.5", features = ["trace", "cors"] }
 
 # Async runtime
@@ -29,20 +28,14 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 # Configuration
 config = "0.14"
-toml = "0.8"
 
 # Error handling
-anyhow = "1.0"
 thiserror = "1.0"
 
 # Utilities
-chrono = { version = "0.4", features = ["serde"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
 async-trait = "0.1"
 
 [dev-dependencies]
-mockito = "1.2"
-tokio-test = "0.4"
 
 [lib]
 name = "crater_ohos_bot"
