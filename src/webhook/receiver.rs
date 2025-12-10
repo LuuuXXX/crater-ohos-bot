@@ -57,7 +57,7 @@ impl WebhookReceiver {
 
         // Verify webhook signature
         let payload = serde_json::to_vec(&webhook)?;
-        if !PlatformAdapter::verify_webhook(self.gitcode_adapter.as_ref(), &payload, signature)? {
+        if !self.gitcode_adapter.verify_webhook(&payload, signature)? {
             info!("Webhook signature verification failed");
             return Err(BotError::WebhookVerification(
                 "Invalid webhook signature".to_string(),
@@ -111,25 +111,18 @@ impl WebhookReceiver {
 
         match response {
             Ok(message) => {
-                PlatformAdapter::post_comment(
-                    self.gitcode_adapter.as_ref(),
-                    &project.path_with_namespace,
-                    issue.iid,
-                    &message,
-                )
-                .await?;
+                self.gitcode_adapter
+                    .post_comment(&project.path_with_namespace, issue.iid, &message)
+                    .await?;
                 info!("Command processed successfully");
             }
             Err(e) => {
                 error!("Error processing command: {}", e);
                 let error_message = format!("❌ 错误: {}", e);
-                if let Err(comment_err) = PlatformAdapter::post_comment(
-                    self.gitcode_adapter.as_ref(),
-                    &project.path_with_namespace,
-                    issue.iid,
-                    &error_message,
-                )
-                .await
+                if let Err(comment_err) = self
+                    .gitcode_adapter
+                    .post_comment(&project.path_with_namespace, issue.iid, &error_message)
+                    .await
                 {
                     error!("Failed to post error comment: {}", comment_err);
                 }

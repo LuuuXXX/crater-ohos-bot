@@ -48,13 +48,9 @@ impl CallbackHandler {
             }
         };
 
-        PlatformAdapter::post_comment(
-            self.gitcode_adapter.as_ref(),
-            &project,
-            issue_id,
-            &message,
-        )
-        .await?;
+        self.gitcode_adapter
+            .post_comment(&project, issue_id, &message)
+            .await?;
 
         Ok(())
     }

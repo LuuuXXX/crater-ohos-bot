@@ -75,15 +75,28 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_experiment_name_with_multiple_dashes() {
+        // Test project names with multiple dashes in the repo name
+        let (project, issue_id) = parse_experiment_name("org-my-cool-project-789").unwrap();
+        assert_eq!(project, "org/my-cool-project");
+        assert_eq!(issue_id, 789);
+    }
+
+    #[test]
     fn test_roundtrip() {
-        let original_project = "user/repo";
-        let original_issue_id = 123;
+        let test_cases = vec![
+            ("user/repo", 123),
+            ("org/project-name", 456),
+            ("owner/my-cool-project", 789),
+        ];
 
-        let experiment_name = generate_experiment_name(original_project, original_issue_id);
-        let (parsed_project, parsed_issue_id) = parse_experiment_name(&experiment_name).unwrap();
+        for (original_project, original_issue_id) in test_cases {
+            let experiment_name = generate_experiment_name(original_project, original_issue_id);
+            let (parsed_project, parsed_issue_id) = parse_experiment_name(&experiment_name).unwrap();
 
-        assert_eq!(parsed_project, original_project);
-        assert_eq!(parsed_issue_id, original_issue_id);
+            assert_eq!(parsed_project, original_project);
+            assert_eq!(parsed_issue_id, original_issue_id);
+        }
     }
 
     #[test]

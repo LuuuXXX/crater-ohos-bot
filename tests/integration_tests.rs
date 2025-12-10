@@ -6,6 +6,7 @@ mod tests {
     #[test]
     fn placeholder_test() {
         // This is a placeholder to ensure the test file compiles
-        assert!(true);
+        let value = true;
+        assert!(value);
     }
 }
