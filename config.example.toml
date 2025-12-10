@@ -1,0 +1,32 @@
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[crater]
+api_url = "http://localhost:3000"
+api_token = "your-crater-api-token"
+callback_base_url = "https://your-bot-domain.com"
+
+[platforms.gitcode]
+enabled = true
+api_url = "https://gitcode.com/api/v5"
+access_token = "your-gitcode-token"
+webhook_secret = "your-webhook-secret"
+
+[platforms.github]
+enabled = false
+api_url = "https://api.github.com"
+access_token = ""
+webhook_secret = ""
+
+[platforms.gitee]
+enabled = false
+api_url = "https://gitee.com/api/v5"
+access_token = ""
+webhook_secret = ""
+
+[bot]
+name = "crater-bot"
+trigger_prefix = "@crater-bot"
+default_mode = "build-and-test"
+default_crate_select = "demo"
