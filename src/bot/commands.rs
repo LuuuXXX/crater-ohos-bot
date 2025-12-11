@@ -33,7 +33,7 @@ impl BotCommand {
             "run" => {
                 if parts.len() < 3 {
                     return Err(BotError::InvalidCommand(
-                        "run 命令需要至少两个工具链参数。用法: @crater-bot run <toolchain1> <toolchain2>".to_string()
+                        "run command requires at least two toolchain arguments. Usage: @crater-bot run <toolchain1> <toolchain2>".to_string()
                     ));
                 }
                 let toolchains = parts[1..].iter().map(|s| s.to_string()).collect();
@@ -44,7 +44,7 @@ impl BotCommand {
             "help" => Ok(Some(BotCommand::Help)),
             "list" => Ok(Some(BotCommand::List)),
             _ => Err(BotError::InvalidCommand(format!(
-                "未知命令: {}. 使用 'help' 查看可用命令",
+                "Unknown command: {}. Use 'help' to see available commands",
                 parts[0]
             ))),
         }

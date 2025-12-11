@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 struct CreateCommentRequest {
@@ -18,7 +18,8 @@ pub struct GitCodeAdapter {
     client: Client,
     config: PlatformConfig,
     // Simple in-memory storage for experiment mappings
-    // In production, this should use a database
+    // WARNING: This will lose all mappings on restart!
+    // TODO: Replace with persistent storage (database or file-based) for production use
     experiment_mappings: Arc<RwLock<HashMap<String, String>>>,
 }
 
@@ -60,7 +61,7 @@ impl PlatformAdapter for GitCodeAdapter {
             .client
             .post(&url)
             .header("Content-Type", "application/json")
-            .query(&[("access_token", &self.config.access_token)])
+            .header("Authorization", format!("token {}", &self.config.access_token))
             .json(&request)
             .send()
             .await?;
@@ -80,12 +81,18 @@ impl PlatformAdapter for GitCodeAdapter {
 
     fn verify_webhook(&self, _payload: &[u8], signature: &str) -> Result<bool> {
         // GitCode uses X-GitCode-Token header for webhook verification
-        // Simple token comparison
-        if signature == self.config.webhook_secret {
-            Ok(true)
-        } else {
-            Ok(false)
+        // Use constant-time comparison to prevent timing attacks
+        use subtle::ConstantTimeEq;
+        
+        let expected = self.config.webhook_secret.as_bytes();
+        let provided = signature.as_bytes();
+        
+        if expected.len() != provided.len() {
+            warn!("Webhook signature length mismatch");
+            return Ok(false);
         }
+        
+        Ok(expected.ct_eq(provided).into())
     }
 
     async fn store_experiment_mapping(
@@ -106,3 +113,4 @@ impl PlatformAdapter for GitCodeAdapter {
         Ok(mappings.get(&key).cloned())
     }
 }
+

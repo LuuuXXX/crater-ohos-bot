@@ -34,6 +34,7 @@ thiserror = "1.0"
 
 # Utilities
 async-trait = "0.1"
+subtle = "2.5"
 
 [dev-dependencies]
 

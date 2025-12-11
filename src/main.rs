@@ -24,8 +24,8 @@ async fn main() -> Result<()> {
 
     info!("Starting crater-ohos-bot");
 
-    // Load configuration
-    let config = Config::from_env()?;
+    // Load configuration and wrap in Arc to avoid cloning
+    let config = Arc::new(Config::from_env()?);
     info!("Configuration loaded");
 
     // Initialize crater client
@@ -56,7 +56,7 @@ async fn main() -> Result<()> {
     let webhook_receiver = Arc::new(WebhookReceiver::new(
         command_processor.clone(),
         gitcode_adapter.clone(),
-        config.clone(),
+        (*config).clone(),
     ));
     info!("Webhook receiver initialized");
 
@@ -64,10 +64,14 @@ async fn main() -> Result<()> {
     let callback_handler = Arc::new(CallbackHandler::new(gitcode_adapter.clone()));
     info!("Callback handler initialized");
 
+    // Extract callback secret from config
+    let callback_secret = config.crater.callback_secret.clone();
+
     // Create application state
     let app_state = AppState {
         webhook_receiver,
         callback_handler,
+        callback_secret,
     };
 
     // Create router
@@ -82,3 +86,4 @@ async fn main() -> Result<()> {
 
     Ok(())
 }
+

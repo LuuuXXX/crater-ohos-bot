@@ -4,7 +4,7 @@ use crate::error::{BotError, Result};
 use crate::platforms::{gitcode::GitCodeAdapter, PlatformAdapter};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GitCodeWebhook {
@@ -50,19 +50,20 @@ impl WebhookReceiver {
 
     pub async fn handle_gitcode_webhook(
         &self,
-        webhook: GitCodeWebhook,
+        payload: &[u8],
         signature: &str,
     ) -> Result<()> {
-        info!("Received GitCode webhook: {:?}", webhook.object_kind);
-
-        // Verify webhook signature
-        let payload = serde_json::to_vec(&webhook)?;
-        if !self.gitcode_adapter.verify_webhook(&payload, signature)? {
-            info!("Webhook signature verification failed");
+        // Verify webhook signature BEFORE deserialization to prevent exploitation
+        if !self.gitcode_adapter.verify_webhook(payload, signature)? {
+            warn!("Webhook signature verification failed - possible attack attempt");
             return Err(BotError::WebhookVerification(
                 "Invalid webhook signature".to_string(),
             ));
         }
+
+        // Deserialize the payload after successful verification
+        let webhook: GitCodeWebhook = serde_json::from_slice(payload)?;
+        info!("Received GitCode webhook: {:?}", webhook.object_kind);
 
         // Only process note (comment) events
         if webhook.object_kind != "note" {
@@ -118,13 +119,15 @@ impl WebhookReceiver {
             }
             Err(e) => {
                 error!("Error processing command: {}", e);
-                let error_message = format!("❌ 错误: {}", e);
+                let error_message = format!("❌ Error: {}", e);
                 if let Err(comment_err) = self
                     .gitcode_adapter
                     .post_comment(&project.path_with_namespace, issue.iid, &error_message)
                     .await
                 {
                     error!("Failed to post error comment: {}", comment_err);
+                    // Also print to stderr for visibility
+                    eprintln!("Critical: Failed to post error comment: {}", comment_err);
                 }
                 return Err(e);
             }
@@ -133,3 +136,4 @@ impl WebhookReceiver {
         Ok(())
     }
 }
+

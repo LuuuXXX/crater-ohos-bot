@@ -3,30 +3,30 @@ use crater_ohos_bot::bot::BotCommand;
 #[test]
 fn test_parse_run_command() {
     let cmd = BotCommand::parse("@crater-bot run stable beta", "@crater-bot").unwrap();
-    assert!(matches!(cmd, Some(BotCommand::Run { .. })));
-    
     if let Some(BotCommand::Run { toolchains }) = cmd {
         assert_eq!(toolchains, vec!["stable", "beta"]);
+    } else {
+        panic!("Expected Some(BotCommand::Run {{ .. }})");
     }
 }
 
 #[test]
 fn test_parse_run_command_with_nightly() {
     let cmd = BotCommand::parse("@crater-bot run nightly-2024-01-01 stable", "@crater-bot").unwrap();
-    assert!(matches!(cmd, Some(BotCommand::Run { .. })));
-    
     if let Some(BotCommand::Run { toolchains }) = cmd {
         assert_eq!(toolchains, vec!["nightly-2024-01-01", "stable"]);
+    } else {
+        panic!("Expected Some(BotCommand::Run {{ .. }})");
     }
 }
 
 #[test]
 fn test_parse_multiple_toolchains() {
     let cmd = BotCommand::parse("@crater-bot run stable beta nightly", "@crater-bot").unwrap();
-    assert!(matches!(cmd, Some(BotCommand::Run { .. })));
-    
     if let Some(BotCommand::Run { toolchains }) = cmd {
         assert_eq!(toolchains, vec!["stable", "beta", "nightly"]);
+    } else {
+        panic!("Expected Some(BotCommand::Run {{ .. }})");
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::crater::WebhookCallback;
-use crate::webhook::{CallbackHandler, GitCodeWebhook, WebhookReceiver};
+use crate::webhook::{CallbackHandler, WebhookReceiver};
 use axum::{
     body::Bytes,
     extract::State,
@@ -8,12 +8,13 @@ use axum::{
     Json, Router,
 };
 use std::sync::Arc;
-use tracing::error;
+use tracing::{error, warn};
 
 #[derive(Clone)]
 pub struct AppState {
     pub webhook_receiver: Arc<WebhookReceiver>,
     pub callback_handler: Arc<CallbackHandler>,
+    pub callback_secret: String,
 }
 
 pub fn create_router(state: AppState) -> Router {
@@ -39,18 +40,10 @@ async fn gitcode_webhook_handler(
         .and_then(|h| h.to_str().ok())
         .unwrap_or("");
 
-    let webhook: GitCodeWebhook = serde_json::from_slice(&payload).map_err(|e| {
-        error!("Failed to parse webhook payload: {}", e);
-        (
-            StatusCode::BAD_REQUEST,
-            format!("Failed to parse webhook payload: {}", e),
-        )
-    })?;
-
-    // Handle the webhook
+    // Handle the webhook with raw payload for signature verification
     state
         .webhook_receiver
-        .handle_gitcode_webhook(webhook, signature)
+        .handle_gitcode_webhook(&payload, signature)
         .await
         .map_err(|e| {
             error!("Failed to handle webhook: {}", e);
@@ -65,19 +58,43 @@ async fn gitcode_webhook_handler(
 
 async fn crater_callback_handler(
     State(state): State<AppState>,
+    headers: HeaderMap,
     Json(callback): Json<WebhookCallback>,
 ) -> Result<StatusCode, (StatusCode, String)> {
-    state
-        .callback_handler
-        .handle_crater_callback(callback)
-        .await
-        .map_err(|e| {
-            error!("Failed to handle crater callback: {}", e);
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                format!("Failed to handle crater callback: {}", e),
-            )
-        })?;
+    // Verify callback authentication using a shared secret
+    let auth_header = headers
+        .get("Authorization")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("");
 
-    Ok(StatusCode::OK)
+    let expected_auth = format!("Bearer {}", state.callback_secret);
+    
+    // Use constant-time comparison to prevent timing attacks
+    use subtle::ConstantTimeEq;
+    if auth_header.as_bytes().ct_eq(expected_auth.as_bytes()).into() {
+        // Authenticated, process the callback
+        state
+            .callback_handler
+            .handle_crater_callback(callback)
+            .await
+            .map_err(|e| {
+                error!("Failed to handle crater callback: {}", e);
+                // Provide more specific error codes based on error type
+                let status_code = if e.to_string().contains("parse") || e.to_string().contains("Invalid") {
+                    StatusCode::BAD_REQUEST
+                } else {
+                    StatusCode::INTERNAL_SERVER_ERROR
+                };
+                (status_code, format!("Failed to handle crater callback: {}", e))
+            })?;
+
+        Ok(StatusCode::OK)
+    } else {
+        warn!("Crater callback authentication failed - unauthorized request");
+        Err((
+            StatusCode::UNAUTHORIZED,
+            "Unauthorized: Invalid or missing authentication".to_string(),
+        ))
+    }
 }
+

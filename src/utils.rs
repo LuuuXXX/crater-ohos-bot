@@ -2,10 +2,11 @@
 use crate::error::{BotError, Result};
 
 /// Generate an experiment name from a project path and issue ID
-/// Format: {project with / replaced by -}-{issue_id}
-/// Example: "user/repo" + 123 -> "user-repo-123"
+/// Format: {project with / replaced by --}--{issue_id}
+/// Example: "user/repo" + 123 -> "user--repo--123"
+/// This uses double-dash to avoid ambiguity with single dashes in owner/repo names
 pub fn generate_experiment_name(project: &str, issue_id: u64) -> String {
-    format!("{}-{}", project.replace('/', "-"), issue_id)
+    format!("{}-{}", project.replace('/', "--"), issue_id)
 }
 
 /// Parse an experiment name to extract project path and issue ID
@@ -28,24 +29,14 @@ pub fn parse_experiment_name(experiment_name: &str) -> Result<(String, u64)> {
         ))
     })?;
 
-    // parts[1] contains the project with dashes, convert back to slashes
-    // We need to convert the first dash back to a slash for the project path
-    // Format is typically: owner-repo -> owner/repo
+    // parts[1] contains the project with double-dashes, convert back to slashes
+    // Format: owner--repo becomes owner/repo
     let project_with_dashes = parts[1];
-    let project = if let Some(dash_pos) = project_with_dashes.find('-') {
-        // Replace the first dash with a slash
-        format!(
-            "{}/{}",
-            &project_with_dashes[..dash_pos],
-            &project_with_dashes[dash_pos + 1..]
-        )
-    } else {
-        // No dash found, return as-is (shouldn't happen in normal usage)
-        project_with_dashes.to_string()
-    };
+    let project = project_with_dashes.replace("--", "/");
 
     Ok((project, issue_id))
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -55,30 +46,34 @@ mod tests {
     fn test_generate_experiment_name() {
         assert_eq!(
             generate_experiment_name("user/repo", 123),
-            "user-repo-123"
+            "user--repo-123"
         );
         assert_eq!(
             generate_experiment_name("org/project-name", 456),
-            "org-project-name-456"
+            "org--project-name-456"
+        );
+        assert_eq!(
+            generate_experiment_name("my-org/my-repo", 789),
+            "my-org--my-repo-789"
         );
     }
 
     #[test]
     fn test_parse_experiment_name() {
-        let (project, issue_id) = parse_experiment_name("user-repo-123").unwrap();
+        let (project, issue_id) = parse_experiment_name("user--repo-123").unwrap();
         assert_eq!(project, "user/repo");
         assert_eq!(issue_id, 123);
 
-        let (project, issue_id) = parse_experiment_name("org-project-name-456").unwrap();
+        let (project, issue_id) = parse_experiment_name("org--project-name-456").unwrap();
         assert_eq!(project, "org/project-name");
         assert_eq!(issue_id, 456);
     }
 
     #[test]
-    fn test_parse_experiment_name_with_multiple_dashes() {
-        // Test project names with multiple dashes in the repo name
-        let (project, issue_id) = parse_experiment_name("org-my-cool-project-789").unwrap();
-        assert_eq!(project, "org/my-cool-project");
+    fn test_parse_experiment_name_with_dashes() {
+        // Test project names with dashes in owner and repo names
+        let (project, issue_id) = parse_experiment_name("my-org--my-cool-project-789").unwrap();
+        assert_eq!(project, "my-org/my-cool-project");
         assert_eq!(issue_id, 789);
     }
 
@@ -88,13 +83,15 @@ mod tests {
             ("user/repo", 123),
             ("org/project-name", 456),
             ("owner/my-cool-project", 789),
+            ("my-org/my-repo", 999),
+            ("complex-owner/complex-repo-name", 111),
         ];
 
         for (original_project, original_issue_id) in test_cases {
             let experiment_name = generate_experiment_name(original_project, original_issue_id);
             let (parsed_project, parsed_issue_id) = parse_experiment_name(&experiment_name).unwrap();
 
-            assert_eq!(parsed_project, original_project);
+            assert_eq!(parsed_project, original_project, "Roundtrip failed for project: {}", original_project);
             assert_eq!(parsed_issue_id, original_issue_id);
         }
     }

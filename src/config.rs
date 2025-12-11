@@ -1,13 +1,25 @@
 use crate::error::{BotError, Result};
 use config::{Config as ConfigLoader, File};
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct Config {
     pub server: ServerConfig,
     pub crater: CraterConfig,
     pub platforms: PlatformsConfig,
     pub bot: BotConfig,
+}
+
+impl fmt::Debug for Config {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Config")
+            .field("server", &self.server)
+            .field("crater", &self.crater)
+            .field("platforms", &"[REDACTED]")
+            .field("bot", &self.bot)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -16,11 +28,24 @@ pub struct ServerConfig {
     pub port: u16,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct CraterConfig {
     pub api_url: String,
     pub api_token: String,
     pub callback_base_url: String,
+    #[serde(default)]
+    pub callback_secret: String,
+}
+
+impl fmt::Debug for CraterConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("CraterConfig")
+            .field("api_url", &self.api_url)
+            .field("api_token", &"[REDACTED]")
+            .field("callback_base_url", &self.callback_base_url)
+            .field("callback_secret", &"[REDACTED]")
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -30,12 +55,23 @@ pub struct PlatformsConfig {
     pub gitee: Option<PlatformConfig>,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct PlatformConfig {
     pub enabled: bool,
     pub api_url: String,
     pub access_token: String,
     pub webhook_secret: String,
+}
+
+impl fmt::Debug for PlatformConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("PlatformConfig")
+            .field("enabled", &self.enabled)
+            .field("api_url", &self.api_url)
+            .field("access_token", &"[REDACTED]")
+            .field("webhook_secret", &"[REDACTED]")
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
